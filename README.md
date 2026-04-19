@@ -52,6 +52,7 @@ The system follows an **agentic loop**:
 Ingest Bug → Extract Context → Search Code → Retrieve Files
 → Analyze Root Cause → Generate RCA → Post to ADO
 
+![Agentic RCA System Architecture](Agentic%20RCA%20System%20Architecture.jpg)
 
 ### Core Components
 
