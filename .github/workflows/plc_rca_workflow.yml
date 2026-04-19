@@ -1,0 +1,344 @@
+name: PLC RCA Workflow - MCP Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      bugId:
+        description: "Azure DevOps Bug ID"
+        required: true
+        type: string
+      force_rerun:
+        description: "Force rerun even if RCA exists"
+        required: false
+        type: boolean
+        default: false
+  # Accept direct ADO webhook payloads
+  repository_dispatch:
+
+
+jobs:
+  agentic-rca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    # Accept workflow_dispatch OR repository_dispatch with ADO webhook
+    if: ${{ github.event_name == 'workflow_dispatch' ||
+            (github.event_name == 'repository_dispatch' &&
+             github.event.client_payload.resource.fields['System.State'].newValue == 'Approved') }}
+
+    env:
+      ADO_BUG_ID: ${{ inputs.bugId }}
+      ADO_ORG_URL: ${{ secrets.ADO_ORG_URL }}
+      ADO_PROJECT_NAME: ${{ secrets.ADO_PROJECT_NAME }}
+      ADO_PAT: ${{ secrets.ADO_PAT }}
+      GITHUB_PAT: ${{ secrets.PAT_GITHUB }}
+      FORCE_RERUN: ${{ inputs.force_rerun || false }}
+      CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+
+    steps:
+      - name: Validate Prerequisites
+        id: validate
+        shell: bash
+        run: |
+          echo "Validating environment..."
+          
+          # Check required secrets
+          if [[ -z "$ADO_PAT" ]]; then
+            echo "Missing required secret: ADO_PAT"
+            exit 1
+          fi
+          
+          # Determine bug ID from event
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BUG_ID="${{ github.event.inputs.bugId }}"
+            echo "Manual trigger - Bug ID: $BUG_ID"
+          else
+            # Extract bug ID from ADO webhook payload
+            # Try workItemId first, then extract from message as fallback
+            BUG_ID="${{ github.event.client_payload.resource.workItemId }}"
+            if [ -z "$BUG_ID" ] || [ "$BUG_ID" = "0" ]; then
+              # Extract from message: "Bug #48835 (...)"
+              BUG_ID=$(echo '${{ github.event.client_payload.message.text }}' | grep -oP 'Bug #\K\d+' || echo "")
+            fi
+            echo "Webhook trigger - Bug ID: $BUG_ID"
+          fi
+          
+          # Validate bug ID format
+          if [[ ! "$BUG_ID" =~ ^[0-9]+$ ]]; then
+            echo "Invalid bug ID format: $BUG_ID"
+            exit 1
+          fi
+          
+          echo "ADO_BUG_ID=$BUG_ID" >> "$GITHUB_ENV"
+          echo "RCA_START_TIME=$(date -u +%Y%m%d_%H%M%S)" >> "$GITHUB_ENV"
+          echo "Environment validated successfully"
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.PAT_GITHUB }}
+
+      - name: Setup Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          echo "Installing Python dependencies..."
+          python -m pip install --upgrade pip
+          pip install -r .github/AgenticRCA/requirements.txt
+
+          echo "Installing system dependencies..."
+          sudo apt-get update -qq
+          sudo apt-get install -y ripgrep jq curl tesseract-ocr
+
+          echo "Dependencies installed successfully"
+
+      - name: Fetch and Validate Bug Details
+        run: |
+          cd "$GITHUB_WORKSPACE/.github/AgenticRCA"
+          
+          # Create required directories
+          mkdir -p cache logs output
+          
+          # Run bug fetcher with retry logic
+          for attempt in {1..3}; do
+            echo "Attempt $attempt: Fetching bug $ADO_BUG_ID..."
+            if python3 plc_bug_fetcher.py; then
+              echo "Bug details fetched successfully"
+              break
+            else
+              echo "Attempt $attempt failed"
+              if [ $attempt -eq 3 ]; then
+                echo "Failed to fetch bug details after 3 attempts"
+                exit 1
+              fi
+              sleep $((attempt * 5))
+            fi
+          done
+          
+          # Validate bug cache file exists and has content
+          if [ ! -f "cache/ado_bug_$ADO_BUG_ID.json" ]; then
+            echo "Bug cache file not created"
+            exit 1
+          fi
+          
+          # Validate JSON structure and check for errors
+          if jq -e '.error' "cache/ado_bug_$ADO_BUG_ID.json" > /dev/null 2>&1; then
+            echo "Bug fetch resulted in error: $(jq -r '.error_message // .error' cache/ado_bug_$ADO_BUG_ID.json)"
+            exit 1
+          fi
+          
+          if ! jq -e '.title' "cache/ado_bug_$ADO_BUG_ID.json" > /dev/null 2>&1; then
+            echo "Bug cache is missing required 'title' field"
+            exit 1
+          fi
+          
+          # Extract basic info for logs
+          BUG_TITLE=$(jq -r '.title // "Unknown"' "cache/ado_bug_$ADO_BUG_ID.json")
+          BUG_PRIORITY=$(jq -r '.priority // "Unknown"' "cache/ado_bug_$ADO_BUG_ID.json")
+          echo "Bug Info: $BUG_TITLE (Priority: $BUG_PRIORITY)"
+          echo "BUG_TITLE=$BUG_TITLE" >> "$GITHUB_ENV"
+
+      - name: Execute RCA Analysis
+        id: run_rca
+        run: |
+          cd "$GITHUB_WORKSPACE/.github/AgenticRCA"
+          
+          echo "Starting Root Cause Analysis..."
+          export RCA_EXECUTION_ID="${RCA_START_TIME}_${ADO_BUG_ID}"
+          export REPO_PATH="${{ github.workspace }}"
+          export WORK_DIR="$GITHUB_WORKSPACE/.github/AgenticRCA"
+          
+          echo "Executing RCA agent with Claude API..."
+          python3 plc_rca_agent.py 2>&1 | tee logs/rca_execution.log
+          
+          # Check execution results with content validation
+          if [ -f "output/rca_output.html" ] && [ -s "output/rca_output.html" ]; then
+            # Verify file has meaningful content (not just whitespace)
+            CONTENT_SIZE=$(grep -v '^[[:space:]]*$' output/rca_output.html | wc -c)
+            if [ "$CONTENT_SIZE" -gt 100 ]; then
+              echo "RCA completed successfully (content size: $CONTENT_SIZE bytes)"
+              echo "RCA_SUCCESS=true" >> "$GITHUB_ENV"
+              echo "RCA_SUCCESS=true" >> $GITHUB_OUTPUT
+            else
+              echo "RCA output file is too small or empty"
+              echo "RCA_SUCCESS=false" >> "$GITHUB_ENV"
+              echo "RCA_SUCCESS=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "RCA completed with issues - checking fallback output"
+            if [ -f "output/rca_fallback.html" ]; then
+              mv output/rca_fallback.html output/rca_output.html
+              echo "Using fallback RCA output"
+              echo "RCA_SUCCESS=partial" >> "$GITHUB_ENV"
+              echo "RCA_SUCCESS=partial" >> $GITHUB_OUTPUT
+            else
+              echo "RCA failed to generate output"
+              echo "RCA_SUCCESS=false" >> "$GITHUB_ENV"
+              echo "RCA_SUCCESS=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Process RCA Results
+        if: steps.run_rca.outputs.RCA_SUCCESS != 'false'
+        run: |
+          cd "$GITHUB_WORKSPACE/.github/AgenticRCA"
+          
+          echo "Processing RCA results..."
+          
+          # Validate HTML output
+          if ! command -v tidy >/dev/null 2>&1; then
+            sudo apt-get install -y tidy
+          fi
+          
+          # Basic HTML validation (non-blocking)
+          if tidy -q -e output/rca_output.html 2>/dev/null; then
+            echo "HTML output is well-formed"
+          else
+            echo "HTML output has formatting issues (continuing anyway)"
+          fi
+          
+          # Extract key metrics using portable commands
+          WORD_COUNT=$(wc -w < output/rca_output.html)
+          FILE_SIZE=$(wc -c < output/rca_output.html)
+          
+          echo "RCA Metrics:"
+          echo "  - Word count: $WORD_COUNT"
+          echo "  - File size: $FILE_SIZE bytes"
+          echo "  - Generated: $(date -u)"
+          
+          # Create summary for artifact
+          cat > output/rca_summary.json << EOF
+          {
+            "bug_id": "$ADO_BUG_ID",
+            "execution_id": "$RCA_EXECUTION_ID",
+            "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "word_count": $WORD_COUNT,
+            "file_size": $FILE_SIZE,
+            "success": "$RCA_SUCCESS",
+            "bug_title": "$BUG_TITLE"
+          }
+          EOF            
+
+      - name: Post RCA to Azure DevOps
+        if: steps.run_rca.outputs.RCA_SUCCESS != 'false'
+        run: |
+          cd "$GITHUB_WORKSPACE/.github/AgenticRCA"
+          
+          echo "Posting RCA to Azure DevOps bug $ADO_BUG_ID..."
+          
+          # Check if output exists
+          if [ ! -f "output/rca_output.html" ] || [ ! -s "output/rca_output.html" ]; then
+            echo "No RCA output to post"
+            exit 1
+          fi
+          echo "Preparing JSON payload..."
+          ESCAPED_HTML=$(jq -Rs . < output/rca_output.html | tr -d '\n')
+          cat > payload.json << EOF
+          [{
+            "op": "add",
+            "path": "/fields/System.History",
+            "value": $ESCAPED_HTML
+          }]
+          EOF
+          ENCODED_PAT=$(printf ":$ADO_PAT" | base64 | tr -d '\n')
+          for attempt in {1..3}; do
+            echo "Posting attempt $attempt..."
+            HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X PATCH \
+              "$ADO_ORG_URL/$ADO_PROJECT_NAME/_apis/wit/workitems/$ADO_BUG_ID?api-version=7.0" \
+              -H "Authorization: Basic $ENCODED_PAT" \
+              -H "Content-Type: application/json-patch+json" \
+              --data-binary @payload.json)
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "RCA posted successfully to bug $ADO_BUG_ID"
+              exit 0
+            else
+              echo "HTTP $HTTP_STATUS - Attempt $attempt failed"
+              if [ $attempt -eq 3 ]; then
+                echo "Failed to post RCA after 3 attempts"
+                echo "Response:" && cat response.json
+                exit 1
+              fi
+              sleep $((attempt * 3))
+            fi
+          done
+
+  # Stop MCP Server step removed; not needed with Copilot MCP Server
+    
+      - name: Generate Execution Report
+        if: always()
+        run: |
+          cd "$GITHUB_WORKSPACE/.github/AgenticRCA"
+          
+          echo "Generating execution report..."
+          
+          # Create comprehensive execution report
+          cat > logs/execution_report.md << EOF
+          # RCA Execution Report
+          
+          ## Summary
+          - **Bug ID**: $ADO_BUG_ID
+          - **Bug Title**: $BUG_TITLE
+          - **Execution ID**: $RCA_EXECUTION_ID
+          - **Status**: $RCA_SUCCESS
+          - **Timestamp**: $(date -u)
+          - **Workflow**: ${{ github.workflow }}
+          - **Run ID**: ${{ github.run_id }}
+          
+          ## Environment
+          - **Repository**: ${{ github.repository }}
+          - **Branch**: ${{ github.ref }}
+          - **Commit**: ${{ github.sha }}
+          - **Actor**: ${{ github.actor }}
+          
+          ## Files Generated
+          EOF
+          
+          # List generated files
+          echo "## File Inventory" >> logs/execution_report.md
+          find . -type f \( -name "*.html" -o -name "*.json" -o -name "*.log" \) | sort | while read file; do
+            size=$(wc -c < "$file")
+            echo "- \`$file\` ($size bytes)" >> logs/execution_report.md
+          done
+          
+          echo "Execution report generated"
+
+      - name: Upload Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rca-output-${{ env.ADO_BUG_ID }}-${{ github.run_number }}
+          retention-days: 30
+          path: |
+            .github/AgenticRCA/output/
+            .github/AgenticRCA/logs/
+            .github/AgenticRCA/cache/ado_bug_${{ env.ADO_BUG_ID }}.json
+          if-no-files-found: warn
+
+      - name: Job Summary
+        if: always()
+        run: |
+          echo "## RCA Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Bug ID | $ADO_BUG_ID |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bug Title | $BUG_TITLE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | $RCA_SUCCESS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Execution ID | $RCA_EXECUTION_ID |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$RCA_SUCCESS" = "true" ]; then
+            echo "**RCA completed successfully and posted to Azure DevOps**" >> $GITHUB_STEP_SUMMARY
+          elif [ "$RCA_SUCCESS" = "partial" ]; then
+            echo "**RCA completed with fallback output**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**RCA failed to complete**" >> $GITHUB_STEP_SUMMARY
+          fi

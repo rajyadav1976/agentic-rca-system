@@ -48,8 +48,6 @@ All **without human intervention**.
 
 ---
 
-## Architecture Overview
-
 The system follows an **agentic loop**:
 Ingest Bug → Extract Context → Search Code → Retrieve Files
 → Analyze Root Cause → Generate RCA → Post to ADO

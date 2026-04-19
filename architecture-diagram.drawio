@@ -1,0 +1,390 @@
+<mxfile host="65bd71144e">
+    <diagram id="agentic-rca-architecture" name="Agentic RCA System Architecture">
+        <mxGraphModel dx="2423" dy="1098" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="Agentic RCA System  -  Architecture Overview" style="text;html=1;fontSize=22;fontFamily=Helvetica;align=center;verticalAlign=middle;whiteSpace=wrap;fontColor=#1a1a2e;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="15" width="800" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="subtitle" value="Autonomous AI Agent for Root Cause Analysis of Enterprise Software Bugs" style="text;html=1;fontSize=12;fontFamily=Helvetica;align=center;verticalAlign=middle;whiteSpace=wrap;fontColor=#666666;fontStyle=2;" parent="1" vertex="1">
+                    <mxGeometry x="450" y="50" width="700" height="25" as="geometry"/>
+                </mxCell>
+                <mxCell id="trigger-group" value="Trigger Layer" style="swimlane;startSize=25;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;rounded=1;arcSize=8;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="90" width="340" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="ado-webhook" value="ADO Webhook&#xa;&#xa;repository_dispatch&#xa;Bug state = Approved" style="rounded=1;whiteSpace=wrap;fillColor=#0078D4;strokeColor=#005a9e;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="trigger-group" vertex="1">
+                    <mxGeometry x="20" y="40" width="140" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="manual-trigger" value="Manual Trigger&#xa;&#xa;workflow_dispatch&#xa;Input: bugId" style="rounded=1;whiteSpace=wrap;fillColor=#4CAF50;strokeColor=#388E3C;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="trigger-group" vertex="1">
+                    <mxGeometry x="180" y="40" width="140" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="validate-step" value="Validate Prerequisites&#xa;Bug ID format, secrets, env vars" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#3F51B5;fontSize=10;" parent="trigger-group" vertex="1">
+                    <mxGeometry x="65" y="135" width="210" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-wh-val" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666;" parent="trigger-group" source="ado-webhook" target="validate-step" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-mt-val" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#666;" parent="trigger-group" source="manual-trigger" target="validate-step" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="cicd-group" value="CI/CD Pipeline  -  GitHub Actions  (plc_rca_workflow.yml)" style="swimlane;startSize=28;fillColor=#FFF3E0;strokeColor=#E65100;fontColor=#E65100;rounded=1;arcSize=8;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="310" width="1520" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-checkout" value="1. Checkout&#xa;Repo + submodules" style="rounded=1;whiteSpace=wrap;fillColor=#FFF8E1;strokeColor=#F57F17;fontSize=10;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="20" y="45" width="120" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-setup" value="2. Setup Python&#xa;3.12 + pip cache" style="rounded=1;whiteSpace=wrap;fillColor=#FFF8E1;strokeColor=#F57F17;fontSize=10;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="170" y="45" width="120" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-deps" value="3. Install Deps&#xa;requirements.txt&#xa;ripgrep, tesseract" style="rounded=1;whiteSpace=wrap;fillColor=#FFF8E1;strokeColor=#F57F17;fontSize=10;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="320" y="45" width="130" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-fetch" value="4. Fetch Bug&#xa;plc_bug_fetcher.py&#xa;3 retries" style="rounded=1;whiteSpace=wrap;fillColor=#FFECB3;strokeColor=#FF8F00;fontSize=10;fontStyle=1;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="480" y="45" width="130" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-rca" value="5. Execute RCA&#xa;plc_rca_agent.py&#xa;Claude Agentic Loop" style="rounded=1;whiteSpace=wrap;fillColor=#FFD54F;strokeColor=#FF6F00;fontSize=10;fontStyle=1;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="640" y="45" width="140" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-process" value="6. Process Results&#xa;HTML validation&#xa;Metrics extraction" style="rounded=1;whiteSpace=wrap;fillColor=#FFF8E1;strokeColor=#F57F17;fontSize=10;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="810" y="45" width="130" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-post" value="7. Post to ADO&#xa;PATCH work item&#xa;System.History" style="rounded=1;whiteSpace=wrap;fillColor=#FFECB3;strokeColor=#FF8F00;fontSize=10;fontStyle=1;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="970" y="45" width="130" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-artifacts" value="8. Upload Artifacts&#xa;output/, logs/&#xa;30-day retention" style="rounded=1;whiteSpace=wrap;fillColor=#FFF8E1;strokeColor=#F57F17;fontSize=10;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="1130" y="45" width="130" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="step-summary" value="9. Job Summary&#xa;GitHub Summary" style="rounded=1;whiteSpace=wrap;fillColor=#FFF8E1;strokeColor=#F57F17;fontSize=10;" parent="cicd-group" vertex="1">
+                    <mxGeometry x="1290" y="45" width="110" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-checkout" target="step-setup" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-setup" target="step-deps" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-deps" target="step-fetch" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-fetch" target="step-rca" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-rca" target="step-process" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-process" target="step-post" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-post" target="step-artifacts" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#E65100;" parent="cicd-group" source="step-artifacts" target="step-summary" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-trigger-cicd" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#333;strokeWidth=2;" parent="1" source="validate-step" target="step-checkout" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="210" y="300"/>
+                            <mxPoint x="120" y="300"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="agent-group" value="Core Agent Engine  (plc_rca_agent.py)" style="swimlane;startSize=28;fillColor=#E8EAF6;strokeColor=#283593;fontColor=#283593;rounded=1;arcSize=8;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="470" width="560" height="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="rca-agent" value="RCAAgent&#xa;Main orchestrator class&#xa;Signal handling, timeouts&#xa;Message history management" style="rounded=1;whiteSpace=wrap;fillColor=#C5CAE9;strokeColor=#283593;fontSize=11;fontStyle=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="180" y="40" width="200" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="rca-config" value="RCAConfig&#xa;max_turns: 25&#xa;max_tool_calls: 15&#xa;timeout: 600s&#xa;model: claude-sonnet-4" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#5C6BC0;fontSize=10;dashed=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="15" y="40" width="145" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="exec-metrics" value="ExecutionMetrics&#xa;turns, tool_calls,&#xa;api_calls, errors,&#xa;tokens, duration" style="rounded=1;whiteSpace=wrap;fillColor=#E8EAF6;strokeColor=#5C6BC0;fontSize=10;dashed=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="400" y="40" width="140" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="loop-label" value="Agentic Reasoning Loop" style="text;html=1;fontSize=11;fontColor=#1A237E;fontStyle=5;align=center;" parent="agent-group" vertex="1">
+                    <mxGeometry x="120" y="125" width="320" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="plan" value="PLAN&#xa;Load prompt&#xa;Initialize context" style="ellipse;whiteSpace=wrap;fillColor=#7986CB;strokeColor=#283593;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="30" y="155" width="110" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="act" value="ACT&#xa;Call Claude API&#xa;Select and execute tools" style="ellipse;whiteSpace=wrap;fillColor=#5C6BC0;strokeColor=#283593;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="160" y="155" width="130" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="observe" value="OBSERVE&#xa;Process tool results&#xa;Update messages" style="ellipse;whiteSpace=wrap;fillColor=#3F51B5;strokeColor=#1A237E;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="310" y="155" width="120" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="reflect" value="REFLECT&#xa;Check completion&#xa;Force if needed" style="ellipse;whiteSpace=wrap;fillColor=#283593;strokeColor=#1A237E;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="agent-group" vertex="1">
+                    <mxGeometry x="440" y="155" width="105" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="el1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FFFFFF;strokeWidth=2;" parent="agent-group" source="plan" target="act" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="el2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FFFFFF;strokeWidth=2;" parent="agent-group" source="act" target="observe" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="el3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FFFFFF;strokeWidth=2;" parent="agent-group" source="observe" target="reflect" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="el4" value="loop" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#FF5722;strokeWidth=2;dashed=1;fontSize=9;fontColor=#FF5722;" parent="agent-group" source="reflect" target="act" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="493" y="240"/>
+                            <mxPoint x="225" y="240"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="guardrails" value="Production Guardrails" style="text;html=1;fontSize=10;fontColor=#C62828;fontStyle=5;align=center;" parent="agent-group" vertex="1">
+                    <mxGeometry x="100" y="260" width="360" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="g1" value="Max 25 turns" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="15" y="285" width="85" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="g2" value="15 tool calls max" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="110" y="285" width="95" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="g3" value="600s hard timeout" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="215" y="285" width="100" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="g4" value="Context trimming" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="325" y="285" width="95" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="g5" value="Fallback RCA" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="430" y="285" width="85" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="g6" value="Force completion @ 12 tools / 240s" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="100" y="325" width="190" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="g7" value="3 error max then terminate" style="rounded=1;fillColor=#FFCDD2;strokeColor=#E53935;fontSize=9;whiteSpace=wrap;" parent="agent-group" vertex="1">
+                    <mxGeometry x="300" y="325" width="155" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="tools-group" value="MCP Tool Layer  (plc_rca_tools.py + plc_github_mcp.py)" style="swimlane;startSize=28;fillColor=#E8F5E9;strokeColor=#2E7D32;fontColor=#2E7D32;rounded=1;arcSize=8;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="630" y="470" width="510" height="370" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool-decorator" value="@Tool Decorator&#xa;plc_github_mcp.py&#xa;Thread-safe registry" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=10;dashed=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="10" y="38" width="130" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="cache-mgr" value="CacheManager&#xa;MD5 key hashing&#xa;TTL: 3600s&#xa;JSON file cache" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=10;dashed=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="370" y="38" width="125" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool1" value="get_ado_bug_details&#xa;Read cached bug JSON&#xa;ADOIntegration class" style="rounded=1;whiteSpace=wrap;fillColor=#A5D6A7;strokeColor=#2E7D32;fontSize=10;fontStyle=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="15" y="120" width="145" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool2" value="github_search_code&#xa;GitHubCodeSearcher&#xa;Local + API fusion&#xa;Relevance scoring" style="rounded=1;whiteSpace=wrap;fillColor=#A5D6A7;strokeColor=#2E7D32;fontSize=10;fontStyle=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="180" y="120" width="145" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool3" value="github_get_file_content&#xa;FileContentManager&#xa;5-strategy fallback" style="rounded=1;whiteSpace=wrap;fillColor=#A5D6A7;strokeColor=#2E7D32;fontSize=10;fontStyle=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="345" y="120" width="150" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool4" value="download_ado_attachment&#xa;ADOIntegration&#xa;Text / Image (OCR) / Binary" style="rounded=1;whiteSpace=wrap;fillColor=#A5D6A7;strokeColor=#2E7D32;fontSize=10;fontStyle=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="15" y="195" width="170" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool5" value="report_rca_result&#xa;RCAReporter&#xa;HTML + JSON output" style="rounded=1;whiteSpace=wrap;fillColor=#66BB6A;strokeColor=#1B5E20;fontSize=10;fontColor=#FFFFFF;fontStyle=1;" parent="tools-group" vertex="1">
+                    <mxGeometry x="205" y="195" width="145" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool6" value="health_check&#xa;Component status" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#388E3C;fontSize=10;" parent="tools-group" vertex="1">
+                    <mxGeometry x="370" y="200" width="120" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="strat-label" value="Multi-Strategy File Retrieval (FileContentManager)" style="text;html=1;fontSize=10;fontColor=#1B5E20;fontStyle=5;align=center;" parent="tools-group" vertex="1">
+                    <mxGeometry x="60" y="265" width="380" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="s1" value="1. Direct path" style="rounded=1;fillColor=#E8F5E9;strokeColor=#66BB6A;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="15" y="290" width="85" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="s2" value="2. Prefix recon" style="rounded=1;fillColor=#E8F5E9;strokeColor=#66BB6A;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="108" y="290" width="85" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="s3" value="3. Recursive find" style="rounded=1;fillColor=#E8F5E9;strokeColor=#66BB6A;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="201" y="290" width="90" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="s4" value="4. GitHub API" style="rounded=1;fillColor=#E8F5E9;strokeColor=#66BB6A;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="299" y="290" width="85" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="s5" value="5. Content search" style="rounded=1;fillColor=#E8F5E9;strokeColor=#66BB6A;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="392" y="290" width="100" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="sa1" style="rounded=1;strokeColor=#66BB6A;" parent="tools-group" source="s1" target="s2" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="sa2" style="rounded=1;strokeColor=#66BB6A;" parent="tools-group" source="s2" target="s3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="sa3" style="rounded=1;strokeColor=#66BB6A;" parent="tools-group" source="s3" target="s4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="sa4" style="rounded=1;strokeColor=#66BB6A;" parent="tools-group" source="s4" target="s5" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="search-label" value="Code Search Pipeline (GitHubCodeSearcher)" style="text;html=1;fontSize=10;fontColor=#1B5E20;fontStyle=5;align=center;" parent="tools-group" vertex="1">
+                    <mxGeometry x="60" y="328" width="380" height="16" as="geometry"/>
+                </mxCell>
+                <mxCell id="sr1" value="Tokenize query" style="rounded=1;fillColor=#E8F5E9;strokeColor=#81C784;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="15" y="348" width="90" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="sr2" value="Local parallel scan" style="rounded=1;fillColor=#E8F5E9;strokeColor=#81C784;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="115" y="348" width="100" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="sr3" value="GitHub API search" style="rounded=1;fillColor=#E8F5E9;strokeColor=#81C784;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="225" y="348" width="100" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="sr4" value="Score + Dedupe + Rank" style="rounded=1;fillColor=#E8F5E9;strokeColor=#81C784;fontSize=9;whiteSpace=wrap;" parent="tools-group" vertex="1">
+                    <mxGeometry x="335" y="348" width="120" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-agent-tools" value="tool calls" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#2E7D32;strokeWidth=2;fontSize=10;fontColor=#2E7D32;" parent="1" source="act" target="tool2" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="610" y="660"/>
+                            <mxPoint x="610" y="620"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="mcp-group" value="MCP Server  (mcp_server.py)" style="swimlane;startSize=25;fillColor=#FCE4EC;strokeColor=#C62828;fontColor=#C62828;rounded=1;arcSize=8;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="1170" y="470" width="390" height="175" as="geometry"/>
+                </mxCell>
+                <mxCell id="jsonrpc" value="JSON-RPC Server&#xa;stdin/stdout protocol&#xa;Request - Dispatch - Response" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C62828;fontSize=10;fontStyle=1;" parent="mcp-group" vertex="1">
+                    <mxGeometry x="15" y="35" width="170" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="tool-registry" value="TOOL_REGISTRY&#xa;Auto-discovered from&#xa;@Tool decorated functions" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C62828;fontSize=10;fontStyle=1;" parent="mcp-group" vertex="1">
+                    <mxGeometry x="210" y="35" width="160" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="fastmcp" value="FastMCP Client&#xa;Subprocess JSON-RPC client&#xa;Thread-safe, auto-reader&#xa;Timeout: 60s" style="rounded=1;whiteSpace=wrap;fillColor=#F48FB1;strokeColor=#AD1457;fontColor=#FFFFFF;fontSize=10;fontStyle=1;" parent="mcp-group" vertex="1">
+                    <mxGeometry x="15" y="105" width="170" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="signal-handler" value="Signal Handling&#xa;SIGTERM / SIGINT&#xa;Graceful shutdown" style="rounded=1;whiteSpace=wrap;fillColor=#F8BBD0;strokeColor=#C62828;fontSize=10;" parent="mcp-group" vertex="1">
+                    <mxGeometry x="240" y="110" width="130" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="em1" style="rounded=1;strokeColor=#C62828;" parent="mcp-group" source="jsonrpc" target="tool-registry" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="fetcher-group" value="Bug Fetcher  (plc_bug_fetcher.py)" style="swimlane;startSize=25;fillColor=#F3E5F5;strokeColor=#6A1B9A;fontColor=#6A1B9A;rounded=1;arcSize=8;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="1170" y="670" width="390" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="ado-fetcher" value="ADOBugFetcher&#xa;Fetch work item + relations&#xa;Comments, attachments&#xa;Parent work item traversal" style="rounded=1;whiteSpace=wrap;fillColor=#CE93D8;strokeColor=#6A1B9A;fontSize=10;fontStyle=1;" parent="fetcher-group" vertex="1">
+                    <mxGeometry x="15" y="35" width="170" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="html-parser" value="HTML to Text&#xa;BeautifulSoup&#xa;Sanitization" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#8E24AA;fontSize=10;" parent="fetcher-group" vertex="1">
+                    <mxGeometry x="210" y="35" width="110" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="cache-output" value="Cache Output&#xa;cache/ado_bug_{id}.json&#xa;Summary report (.md)" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#8E24AA;fontSize=10;" parent="fetcher-group" vertex="1">
+                    <mxGeometry x="15" y="115" width="170" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="retry-logic" value="Retry Logic&#xa;backoff.on_exception&#xa;3 retries, 30s max" style="rounded=1;whiteSpace=wrap;fillColor=#E1BEE7;strokeColor=#8E24AA;fontSize=10;" parent="fetcher-group" vertex="1">
+                    <mxGeometry x="210" y="110" width="130" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="ext-group" value="External Services" style="swimlane;startSize=25;fillColor=#FAFAFA;strokeColor=#9E9E9E;fontColor=#616161;rounded=1;arcSize=8;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="870" width="1120" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="claude-api" value="Anthropic Claude API&#xa;claude-sonnet-4-20250514&#xa;Tool use, temperature=0&#xa;4000 max tokens" style="rounded=1;whiteSpace=wrap;fillColor=#FFF9C4;strokeColor=#F9A825;fontSize=10;fontStyle=1;" parent="ext-group" vertex="1">
+                    <mxGeometry x="20" y="35" width="165" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="ado-api" value="Azure DevOps REST API&#xa;Work Items API v7.1&#xa;Comments, Attachments&#xa;PATCH (post RCA)" style="rounded=1;whiteSpace=wrap;fillColor=#BBDEFB;strokeColor=#1565C0;fontSize=10;fontStyle=1;" parent="ext-group" vertex="1">
+                    <mxGeometry x="220" y="35" width="165" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="github-api" value="GitHub API&#xa;Code Search API&#xa;Contents API (file read)&#xa;Per-page: 30 results" style="rounded=1;whiteSpace=wrap;fillColor=#C8E6C9;strokeColor=#2E7D32;fontSize=10;fontStyle=1;" parent="ext-group" vertex="1">
+                    <mxGeometry x="420" y="35" width="155" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="tesseract" value="Tesseract OCR&#xa;pytesseract + Pillow&#xa;Screenshot text extraction" style="rounded=1;whiteSpace=wrap;fillColor=#D7CCC8;strokeColor=#795548;fontSize=10;fontStyle=1;" parent="ext-group" vertex="1">
+                    <mxGeometry x="610" y="35" width="145" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="local-repo" value="Local Repository&#xa;Cloned codebase&#xa;Parallel file traversal&#xa;ThreadPoolExecutor(4)" style="rounded=1;whiteSpace=wrap;fillColor=#E0E0E0;strokeColor=#757575;fontSize=10;fontStyle=1;" parent="ext-group" vertex="1">
+                    <mxGeometry x="790" y="35" width="150" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh-actions" value="GitHub Actions&#xa;ubuntu-latest runner&#xa;Artifacts, Job Summary" style="rounded=1;whiteSpace=wrap;fillColor=#E0E0E0;strokeColor=#757575;fontSize=10;fontStyle=1;" parent="ext-group" vertex="1">
+                    <mxGeometry x="960" y="40" width="130" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="output-group" value="Output Artifacts" style="swimlane;startSize=25;fillColor=#E0F2F1;strokeColor=#00695C;fontColor=#00695C;rounded=1;arcSize=8;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="1055" width="1120" height="135" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-html" value="rca_output.html&#xa;Styled HTML RCA report" style="rounded=1;whiteSpace=wrap;fillColor=#B2DFDB;strokeColor=#00695C;fontSize=10;fontStyle=1;" parent="output-group" vertex="1">
+                    <mxGeometry x="20" y="75" width="145" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-json" value="rca_output.json&#xa;Machine-readable RCA" style="rounded=1;whiteSpace=wrap;fillColor=#B2DFDB;strokeColor=#00695C;fontSize=10;fontStyle=1;" parent="output-group" vertex="1">
+                    <mxGeometry x="185" y="75" width="140" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-log" value="rca_agent.log&#xa;Execution log" style="rounded=1;whiteSpace=wrap;fillColor=#B2DFDB;strokeColor=#00695C;fontSize=10;" parent="output-group" vertex="1">
+                    <mxGeometry x="345" y="75" width="120" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-interactions" value="interactions.jsonl&#xa;Claude interaction log" style="rounded=1;whiteSpace=wrap;fillColor=#B2DFDB;strokeColor=#00695C;fontSize=10;" parent="output-group" vertex="1">
+                    <mxGeometry x="485" y="75" width="140" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-exec" value="execution_report.json&#xa;Metrics + config snapshot" style="rounded=1;whiteSpace=wrap;fillColor=#B2DFDB;strokeColor=#00695C;fontSize=10;" parent="output-group" vertex="1">
+                    <mxGeometry x="645" y="75" width="155" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-ado" value="ADO Bug Update&#xa;System.History field" style="rounded=1;whiteSpace=wrap;fillColor=#80CBC4;strokeColor=#004D40;fontColor=#004D40;fontSize=10;fontStyle=1;" parent="output-group" vertex="1">
+                    <mxGeometry x="820" y="75" width="130" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="out-artifacts" value="GH Artifacts&#xa;30-day retention" style="rounded=1;whiteSpace=wrap;fillColor=#B2DFDB;strokeColor=#00695C;fontSize=10;" parent="output-group" vertex="1">
+                    <mxGeometry x="970" y="75" width="120" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-agent-claude" value="API calls (backoff)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#F9A825;strokeWidth=2;fontSize=9;fontColor=#F9A825;dashed=1;" parent="1" source="rca-agent" target="claude-api" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="320" y="860"/>
+                            <mxPoint x="103" y="860"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-tools-ado" value="REST API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#1565C0;strokeWidth=1;fontSize=9;fontColor=#1565C0;dashed=1;" parent="1" source="tool1" target="ado-api" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="715" y="860"/>
+                            <mxPoint x="303" y="860"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-tools-github" value="Search + Contents" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#2E7D32;strokeWidth=1;fontSize=9;fontColor=#2E7D32;dashed=1;" parent="1" source="tool2" target="github-api" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="883" y="855"/>
+                            <mxPoint x="538" y="855"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-tools-local" value="file scan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#757575;strokeWidth=1;fontSize=9;fontColor=#757575;dashed=1;" parent="1" source="tool3" target="local-repo" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1050" y="850"/>
+                            <mxPoint x="905" y="850"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-report-output" value="write" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#00695C;strokeWidth=2;fontSize=9;fontColor=#00695C;" parent="1" source="tool5" target="out-html" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="640" y="693"/>
+                            <mxPoint x="640" y="1100"/>
+                            <mxPoint x="93" y="1100"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge-fetcher-ado" value="fetch" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6A1B9A;strokeWidth=1;fontSize=9;fontColor=#6A1B9A;dashed=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1170" y="803"/>
+                            <mxPoint x="1170" y="1003"/>
+                            <mxPoint x="350" y="1003"/>
+                        </Array>
+                        <mxPoint x="1185" y="803" as="sourcePoint"/>
+                        <mxPoint x="350" y="975" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="prompt-box" value="System Prompt&#xa;plc_rca_prompt.txt&#xa;&#xa;RCA execution plan&#xa;HTML output format&#xa;Tool usage constraints&#xa;Response guardrails" style="rounded=1;whiteSpace=wrap;fillColor=#FFFDE7;strokeColor=#F57F17;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1190" y="870" width="150" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge-prompt-agent" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#F57F17;strokeWidth=1;dashed=1;" parent="1" source="prompt-box" target="rca-agent" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1375" y="930"/>
+                            <mxPoint x="1480" y="930"/>
+                            <mxPoint x="1480" y="458"/>
+                            <mxPoint x="320" y="458"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="secrets-box" value="Secrets and Environment&#xa;&#xa;CLAUDE_API_KEY&#xa;ADO_PAT / ADO_ORG_URL&#xa;ADO_PROJECT_NAME&#xa;GITHUB_PAT / GITHUB_TOKEN&#xa;ADO_BUG_ID&#xa;GITHUB_REPOSITORY" style="rounded=1;whiteSpace=wrap;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1370" y="870" width="170" height="130" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
